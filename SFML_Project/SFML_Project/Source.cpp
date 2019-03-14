@@ -36,6 +36,11 @@ struct DataFile
 	}
 };
 
+struct Line
+{
+	sf::Vertex line[2];
+};
+
 std::vector<DataFile> LoadData();
 
 UINT FitData(std::vector<DataFile> & data);
@@ -164,6 +169,9 @@ void CalcReferenceAndDelta(std::vector<DataFile>& sortedData, UINT samples)
 
 void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 {
+	std::vector<sf::Image> Images(samples);
+
+
 	sf::RectangleShape background;
 	background.setSize(sf::Vector2f(gScreenSize.x, gScreenSize.y));
 	background.setFillColor(sf::Color::White);
@@ -171,8 +179,6 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 	size_t numberOfBoxes = data.size();
 
 	std::vector<sf::RectangleShape> boxes(numberOfBoxes);
-
-	
 
 	for (int i = 0; i < numberOfBoxes; i++)
 	{
@@ -182,56 +188,60 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 		boxes[i].setOutlineColor(sf::Color::Black);
 	}
 
-	float boxHeight = (float)gScreenSize.y / (float)numberOfBoxes;
-
-	sf::RenderWindow window(sf::VideoMode(gScreenSize.x, gScreenSize.y), "Timeline Creator");
 	sf::RenderTexture rTex;
 	rTex.create(gScreenSize.x, gScreenSize.y);
 
-	//for (UINT s = 0; s < samples && window.isOpen(); s++)
-	for (UINT s = 0; s < 1 && window.isOpen(); s++)
-	{
-		sf::Event event;
-		while (window.pollEvent(event))
-		{
-			if (event.type == sf::Event::Closed)
-				window.close();
-		}
+	float offset = 128;
 
+	float boxHeight = ((float)gScreenSize.y - offset) / (float)numberOfBoxes;
+
+	//for (UINT s = 0; s < 1; s++)
+	for (UINT s = 0; s < samples; s++)
+	{
 		long double Max = data.back().Data[s].TickEnd;
 
 		for (size_t box = 0; box < numberOfBoxes; box++)
 		{
+			if (s == 19 && box == 1)
+				int lol = 2;
+
+
 			sf::Vector2f pos;
-			pos.y = boxHeight * box;
-			pos.x = ((long double)data[box].Data.at(s).TickStart / Max) * (double)gScreenSize.x;
+			pos.y = boxHeight * box + offset * 0.5f;
+			pos.x = ((long double)data[box].Data.at(s).TickStart / Max) * ((double)gScreenSize.x - offset);
+
+			if (pos.x < 0.0f)
+				pos.x = 0.0f;
+
+			if (pos.x > gScreenSize.x)
+				pos.x = 0.0f;
 
 			sf::Vector2f size;
 			size.y = boxHeight;
-			size.x = ((long double)data[box].Data.at(s).TickDelta / Max) * (double)gScreenSize.x;;
+			size.x = ((long double)data[box].Data.at(s).TickDelta / Max) * ((double)gScreenSize.x - offset);
+
+			if (size.x < 4.0f)
+				size.x = 4.0f;
 
 			boxes[box].setPosition(pos);
 			boxes[box].setSize(size);
 		}
 
-
-		window.clear();
 		rTex.clear();
 		rTex.draw(background);
-		window.draw(background);
 
 		for (auto & b : boxes)
 		{
 			rTex.draw(b);
-			window.draw(b);
 		}
-		
 		rTex.display();
-		window.display();
 		
-		sf::Image diag = rTex.getTexture().copyToImage();
-		
-		diag.saveToFile(PATH + "diagram_" + std::to_string(s) + ".bmp");
+		Images[s] = rTex.getTexture().copyToImage();
+	}
+
+	for (int i = 0; i < samples; i++)
+	{
+		Images[i].saveToFile(PATH + "diagram_" + std::to_string(i) + ".bmp");
 	}
 
 }
