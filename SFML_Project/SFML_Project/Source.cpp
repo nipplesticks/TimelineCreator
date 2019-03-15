@@ -431,7 +431,7 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 	}
 
 
-	std::cout << "Writing to disk...\n";
+	std::cout << "\nWriting to disk...\n";
 	for (int i = 0; i < samples; i++)
 	{
 		float precent = (((float)i + 1.0f) / float(samples)) * 100.0f;
@@ -439,9 +439,9 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 
 
 		if (broken[i])
-			Images[i].saveToFile(PATH + "Chart_" + std::to_string(i) + "_broken.bmp");
+			Images[i].saveToFile(PATH + "../Charts/Chart_" + std::to_string(i) + "_broken.bmp");
 		else
-			Images[i].saveToFile(PATH + "Chart_" + std::to_string(i) + ".bmp");
+			Images[i].saveToFile(PATH + "../Charts/Chart_" + std::to_string(i) + ".bmp");
 	}
 
 }
