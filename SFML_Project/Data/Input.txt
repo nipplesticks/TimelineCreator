@@ -1,5 +1,7 @@
 1280 720
 arial.ttf
+Block_Texture.png
+255 255 255
 _DEFERRED.txt
 _DEFINE.txt
 _GEOMETRY.txt
