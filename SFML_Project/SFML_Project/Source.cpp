@@ -47,6 +47,11 @@ UINT FitData(std::vector<DataFile> & data);
 
 void CalcReferenceAndDelta(std::vector<DataFile> & sortedData, UINT samples);
 
+float lerp(float a, float b, float f)
+{
+	return a + f * (b - a);
+}
+
 void CreateDiagram(const std::vector<DataFile> & data, UINT samples);
 
 struct ScreenSize
@@ -58,6 +63,7 @@ struct ScreenSize
 const std::string PATH = "../Data/";
 
 ScreenSize gScreenSize;
+sf::Font gFont;
 
 int main()
 {
@@ -89,7 +95,11 @@ std::vector<DataFile> LoadData()
 		ss >> gScreenSize.x;
 		ss >> gScreenSize.y;
 	}
-
+	{
+		std::string font;
+		std::getline(loadFiles, font);
+		gFont.loadFromFile(PATH + font);
+	}
 
 	std::string fileName;
 	while (std::getline(loadFiles, fileName))
@@ -169,16 +179,15 @@ void CalcReferenceAndDelta(std::vector<DataFile>& sortedData, UINT samples)
 
 void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 {
-	std::vector<sf::Image> Images(samples);
-
-
 	sf::RectangleShape background;
 	background.setSize(sf::Vector2f(gScreenSize.x, gScreenSize.y));
 	background.setFillColor(sf::Color::White);
+	
+	std::vector<sf::Image> Images(samples);
 
 	size_t numberOfBoxes = data.size();
-
 	std::vector<sf::RectangleShape> boxes(numberOfBoxes);
+	std::vector<sf::RectangleShape> titles(numberOfBoxes);
 
 	for (int i = 0; i < numberOfBoxes; i++)
 	{
@@ -186,29 +195,102 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 		boxes[i].setFillColor(c);
 		boxes[i].setOutlineThickness(-2.0f);
 		boxes[i].setOutlineColor(sf::Color::Black);
+		titles[i] = boxes[i];
 	}
 
 	sf::RenderTexture rTex;
 	rTex.create(gScreenSize.x, gScreenSize.y);
 
-	float offset = 128;
+	float offsetY = 256;
+	float offsetX = 128;
 
-	float boxHeight = ((float)gScreenSize.y - offset) / (float)numberOfBoxes;
+	float boxHeight = ((float)gScreenSize.y - offsetY) / (float)numberOfBoxes;
 
-	//for (UINT s = 0; s < 1; s++)
-	for (UINT s = 0; s < samples; s++)
+	std::vector<Line> lines(10);
+
+	for (auto & l : lines)
+	{
+		l.line[0].color = sf::Color::Black;
+		l.line[1].color = sf::Color::Black;	
+	}
+
+	for (UINT s = 0; s < 1; s++)
+	//for (UINT s = 0; s < samples; s++)
 	{
 		long double Max = data.back().Data[s].TickEnd;
 
+		rTex.clear();
+		rTex.draw(background);
+
+		
+		float sPos = ((long double)data.front().Data.at(s).TickStart / Max) * ((double)gScreenSize.x - offsetX) + offsetX * 0.5f;
+		float ePos = ((long double)data.back().Data.at(s).TickStart / Max) * ((double)gScreenSize.x - offsetX) + offsetX * 0.5f;
+		float eSize = ((long double)data.back().Data.at(s).TickDelta / Max) * ((double)gScreenSize.x - offsetX);
+
+		sf::Vector2f startLinePos1(sPos, offsetY * 0.9f);
+		sf::Vector2f startLinePos2(sPos, gScreenSize.y);
+		sf::Vector2f endLinePos1(ePos + eSize, offsetY * 0.9f);
+		sf::Vector2f endLinePos2(ePos + eSize, gScreenSize.y);
+
+		sf::Text text;
+		text.setFont(gFont);
+		text.setCharacterSize(16);
+		text.setString(std::to_string(data.front().Data.at(s).TickStart));
+		text.setFillColor(sf::Color::Black);
+		auto bb = text.getLocalBounds();
+
+		sf::Vector2f origin((float)bb.width * 0.5f, (float)bb.height * 0.5f);
+		text.setOrigin(origin);
+
+		lines.front().line[0].position = startLinePos1;
+		lines.front().line[1].position = startLinePos2;
+		text.setPosition(lines.front().line[0].position - sf::Vector2f(0, text.getCharacterSize()));
+
+		rTex.draw(lines.front().line, 2, sf::Lines);
+		rTex.draw(text);
+
+		text.setString(std::to_string(data.back().Data.at(s).TickEnd));
+		bb = text.getLocalBounds();
+		origin = sf::Vector2f((float)bb.width * 0.5f, (float)bb.height * 0.5f);
+		text.setOrigin(origin);
+
+		lines.back().line[0].position = endLinePos1;
+		lines.back().line[1].position = endLinePos2;
+
+		text.setPosition(lines.back().line[0].position - sf::Vector2f(0, text.getCharacterSize()));
+		rTex.draw(lines.back().line, 2, sf::Lines);
+		rTex.draw(text);
+
+		for (int i = 1; i < lines.size() - 1; i++)
+		{
+			float lerpVal = (float)i / (lines.size() - 1.0f);
+
+			sf::Vector2f pos1(lerp(startLinePos1.x, endLinePos1.x, lerpVal), offsetY * 0.9);
+			sf::Vector2f pos2(pos1.x, gScreenSize.y);
+			lines[i].line[0].position = pos1;
+			lines[i].line[1].position = pos2;
+			//text.setString(std::to_string(data.back().Data.at(s).TickEnd));
+			text.setString(std::to_string((int)(lerp((long double)data.front().Data.at(s).TickStart, (long double)data.back().Data.at(s).TickEnd, lerpVal) + 0.5f)));
+			bb = text.getLocalBounds();
+			origin = sf::Vector2f((float)bb.width * 0.5f, (float)bb.height * 0.5f);
+			text.setOrigin(origin);
+			text.setPosition(pos1 - sf::Vector2f(0, text.getCharacterSize()));
+
+			rTex.draw(lines[i].line, 2, sf::Lines);
+			rTex.draw(text);
+		}
+
+
 		for (size_t box = 0; box < numberOfBoxes; box++)
 		{
-			if (s == 19 && box == 1)
-				int lol = 2;
-
-
 			sf::Vector2f pos;
-			pos.y = boxHeight * box + offset * 0.5f;
-			pos.x = ((long double)data[box].Data.at(s).TickStart / Max) * ((double)gScreenSize.x - offset);
+			pos.y = boxHeight * box + offsetY;
+			pos.x = ((long double)data[box].Data.at(s).TickStart / Max) * ((double)gScreenSize.x - offsetX) + offsetX * 0.5f;
+
+			sf::Vector2f size;
+			size.y = boxHeight;
+			size.x = ((long double)data[box].Data.at(s).TickDelta / Max) * ((double)gScreenSize.x - offsetX);
+
 
 			if (pos.x < 0.0f)
 				pos.x = 0.0f;
@@ -216,24 +298,14 @@ void CreateDiagram(const std::vector<DataFile>& data, UINT samples)
 			if (pos.x > gScreenSize.x)
 				pos.x = 0.0f;
 
-			sf::Vector2f size;
-			size.y = boxHeight;
-			size.x = ((long double)data[box].Data.at(s).TickDelta / Max) * ((double)gScreenSize.x - offset);
-
 			if (size.x < 4.0f)
 				size.x = 4.0f;
 
 			boxes[box].setPosition(pos);
 			boxes[box].setSize(size);
+			rTex.draw(boxes[box]);
 		}
 
-		rTex.clear();
-		rTex.draw(background);
-
-		for (auto & b : boxes)
-		{
-			rTex.draw(b);
-		}
 		rTex.display();
 		
 		Images[s] = rTex.getTexture().copyToImage();
