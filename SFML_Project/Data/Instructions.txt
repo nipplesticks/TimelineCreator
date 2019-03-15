@@ -2,8 +2,9 @@
 StartTime EndTime DeltaTime
 
 [Input.txt]
-X Y 		# Chart Res)
-Texture.png 	# What texture the blocks will use)
+X Y 		# Chart Res
+font.ttf	# Text font
+Texture.png 	# What texture the blocks will use
 R G B 		# Background color
 Datasample1.txt	# DatasampleFile1
 Datasample2.txt	# DatasampleFile2
